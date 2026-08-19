@@ -5,41 +5,24 @@ on:
     branches: [ "main", "master" ]
   workflow_dispatch:
 
-env:
-  IDF_VERSION: v5.5.4
-  IDF_TARGET: esp32
-
 jobs:
   build-nonwifi:
     name: "Build (no WiFi)"
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install ESP-IDF prerequisites
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq git wget flex bison gperf python3 python3-venv \
-            cmake ninja-build ccache libffi-dev libssl-dev dfu-util libusb-1.0-0 \
-            python3-pip jq > /dev/null
-
-      - name: Clone & install ESP-IDF ${{ env.IDF_VERSION }}
-        run: |
-          git clone --depth 1 --branch ${{ env.IDF_VERSION }} --shallow-submodules \
-            --recursive https://github.com/espressif/esp-idf.git ~/esp/esp-idf
-          python3 -m pip install --quiet --upgrade pip setuptools wheel
-          python3 ~/esp/esp-idf/tools/idf_tools.py install cmake ninja
-          python3 ~/esp/esp-idf/tools/idf_tools.py install
-
-      - name: Build (no WiFi)
-        run: |
-          source ~/esp/esp-idf/export.sh
-          idf.py set-target ${{ env.IDF_TARGET }}
-          idf.py build
-          idf.py size
-          idf.py size-components | head -60
-          idf.py merge-bin -o xiaomiao-loader-merged.bin
-          ls -la build/*.bin build/*.elf xiaomiao-loader-merged.bin
+      - name: Build with ESP-IDF v5.5.4 (no WiFi)
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.5.4
+          target: esp32
+          command: |
+            idf.py build
+            idf.py size
+            idf.py size-components
+            idf.py merge-bin -o xiaomiao-loader-merged.bin
+            ls -la build/*.bin xiaomiao-loader-merged.bin
 
       - name: Upload artifacts (no WiFi)
         uses: actions/upload-artifact@v4
@@ -56,39 +39,21 @@ jobs:
 
   build-wifi:
     name: "Build (WiFi OTA)"
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install ESP-IDF prerequisites
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq git wget flex bison gperf python3 python3-venv \
-            cmake ninja-build ccache libffi-dev libssl-dev dfu-util libusb-1.0-0 \
-            python3-pip jq > /dev/null
-
-      - name: Clone & install ESP-IDF ${{ env.IDF_VERSION }}
-        run: |
-          git clone --depth 1 --branch ${{ env.IDF_VERSION }} --shallow-submodules \
-            --recursive https://github.com/espressif/esp-idf.git ~/esp/esp-idf
-          python3 -m pip install --quiet --upgrade pip setuptools wheel
-          python3 ~/esp/esp-idf/tools/idf_tools.py install cmake ninja
-          python3 ~/esp/esp-idf/tools/idf_tools.py install
-
-      # WiFi 版：启用 Kconfig 开关（编译前读取 sdkconfig.defaults）
-      - name: Enable WiFi OTA
-        run: |
-          echo "CONFIG_XIAOMIAO_ENABLE_WIFI=y" >> sdkconfig.defaults
-
-      - name: Build (WiFi OTA)
-        run: |
-          source ~/esp/esp-idf/export.sh
-          idf.py set-target ${{ env.IDF_TARGET }}
-          idf.py build
-          idf.py size
-          idf.py size-components | head -60
-          idf.py merge-bin -o xiaomiao-loader-merged-wifi.bin
-          ls -la build/*.bin build/*.elf xiaomiao-loader-merged-wifi.bin
+      - name: Build with ESP-IDF v5.5.4 (WiFi OTA)
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.5.4
+          target: esp32
+          command: |
+            echo "CONFIG_XIAOMIAO_ENABLE_WIFI=y" >> sdkconfig.defaults
+            idf.py build
+            idf.py size
+            idf.py merge-bin -o xiaomiao-loader-merged-wifi.bin
+            ls -la build/*.bin xiaomiao-loader-merged-wifi.bin
 
       - name: Upload artifacts (WiFi)
         uses: actions/upload-artifact@v4
