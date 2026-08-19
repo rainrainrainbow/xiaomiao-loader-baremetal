@@ -21,8 +21,8 @@ jobs:
             idf.py build
             idf.py size
             idf.py size-components
-            idf.py merge-bin -o xiaomiao-loader-merged.bin
-            ls -la build/*.bin xiaomiao-loader-merged.bin
+            idf.py merge-bin -o build/xiaomiao-loader-merged.bin
+            ls -la build/*.bin
 
       - name: Upload artifacts (no WiFi)
         uses: actions/upload-artifact@v4
@@ -33,7 +33,7 @@ jobs:
             build/bootloader/bootloader.bin
             build/partition_table/partition-table.bin
             build/ota_data_initial.bin
-            xiaomiao-loader-merged.bin
+            build/xiaomiao-loader-merged.bin
             build/xiaomiao-loader-baremetal.map
           if-no-files-found: error
 
@@ -52,8 +52,8 @@ jobs:
             echo "CONFIG_XIAOMIAO_ENABLE_WIFI=y" >> sdkconfig.defaults
             idf.py build
             idf.py size
-            idf.py merge-bin -o xiaomiao-loader-merged-wifi.bin
-            ls -la build/*.bin xiaomiao-loader-merged-wifi.bin
+            idf.py merge-bin -o build/xiaomiao-loader-merged-wifi.bin
+            ls -la build/*.bin
 
       - name: Upload artifacts (WiFi)
         uses: actions/upload-artifact@v4
@@ -61,6 +61,6 @@ jobs:
           name: xiaomiao-loader-wifi
           path: |
             build/xiaomiao-loader-baremetal.bin
-            xiaomiao-loader-merged-wifi.bin
+            build/xiaomiao-loader-merged-wifi.bin
             build/xiaomiao-loader-baremetal.map
           if-no-files-found: error
