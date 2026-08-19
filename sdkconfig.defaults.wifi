@@ -8,7 +8,8 @@
 CONFIG_XIAOMIAO_ENABLE_WIFI=y
 
 # 使用更大的 factory 分区（WiFi 版 app ~673KB 超出原 568KB）
-CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions_wifi.csv"
+# 注意：由 CI 在 build 前复制 partitions_wifi.csv → partitions.csv
+# CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions_wifi.csv"
 
 # ── 激进的体积优化 ────────────────────────────────────────
 # 目标：WiFi 版 app ≤ 300KB，装进 568KB 工厂分区

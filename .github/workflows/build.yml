@@ -52,6 +52,7 @@ jobs:
           target: esp32
           command: |
             export SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.wifi"
+            cp partitions_wifi.csv partitions.csv
             idf.py build
             idf.py size
             idf.py size-components
