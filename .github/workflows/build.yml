@@ -21,7 +21,7 @@ jobs:
             idf.py build
             idf.py size
             idf.py size-components
-            grep -E 'CONFIG_ESPTOOLPY_FLASHMODE|CONFIG_SPIRAM_MODE' sdkconfig
+            python3 -c "import re; d=open('sdkconfig').read(); import sys; [print(l) for l in d.splitlines() if 'FLASHMODE' in l or 'SPIRAM_MODE' in l]"
             idf.py merge-bin -o xiaomiao-loader-merged.bin
             ls -la build/*.bin
             ls -la *.bin 2>/dev/null || true
@@ -54,7 +54,7 @@ jobs:
             export SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.wifi"
             idf.py build
             idf.py size
-            grep -E 'CONFIG_XIAOMIAO_ENABLE_WIFI|CONFIG_ESPTOOLPY_FLASHMODE' sdkconfig
+            python3 -c "d=open('sdkconfig').read(); print([l for l in d.splitlines() if 'XIAOMIAO_ENABLE_WIFI' in l or 'FLASHMODE' in l])"
             idf.py merge-bin -o xiaomiao-loader-merged-wifi.bin
             ls -la build/*.bin
             ls -la *.bin 2>/dev/null || true
