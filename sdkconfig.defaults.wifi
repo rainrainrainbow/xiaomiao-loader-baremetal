@@ -11,10 +11,11 @@ CONFIG_XIAOMIAO_ENABLE_WIFI=y
 # 目标：WiFi 版 app ≤ 300KB，装进 568KB 工厂分区
 # 注意：禁用项必须用 "# CONFIG_XXX is not set" 格式
 
-# 关闭 mbedtls TLS（用 HTTP 裸 socket，不用 HTTPS）
-# CONFIG_MBEDTLS_SSL_PROTO_TLS1_2 is not set
+# 关闭 mbedtls 非必要的 TLS 部分（保留 TLS1.2 因为 esp_wifi 的 WPA2 依赖 mbedtls TLS，
+# 但关闭所有协议会导致 check_config.h 报错 "no protocols are active"）
 # CONFIG_MBEDTLS_SSL_PROTO_TLS1_1 is not set
 # CONFIG_MBEDTLS_SSL_PROTO_TLS1 is not set
+# CONFIG_MBEDTLS_SSL_PROTO_DTLS is not set
 # CONFIG_MBEDTLS_CERTIFICATE_BUNDLE is not set
 # CONFIG_MBEDTLS_HAVE_TIME is not set
 # CONFIG_MBEDTLS_HAVE_TIME_DATE is not set
