@@ -1,0 +1,17 @@
+# Xiaomiao ROM Loader partition table - WiFi OTA Edition
+# Flash: 4MB QIO 80MHz, partition table at 0x8000
+#
+# 相较于 partitions.csv，本表扩大 factory 分区以容纳 WiFi 版固件（~673KB），
+# 从 launcher 分区借空间。launcher 缩减至 1.68MB（仍可装大部分单 ROM）。
+# retro-core 保持 1.125MB。
+#
+# 注意：本表与 retro-go 原始分区表不兼容（launcher 空间缩小）。
+# 仅用于 WiFi OTA 固件烧录。
+#
+# Name,       Type, SubType, Offset,   Size,     Flags
+nvs,          data, nvs,     0xA000,   0x5000,
+phy_init,     data, phy,     0xF000,   0x1000,
+factory,      app,  factory, 0x10000,  0x120000,  # 1.125MB（装 WiFi 版 ~673KB）
+otadata,      data, ota,     0x130000, 0x2000,
+launcher,     app,  ota_0,   0x132000, 0x1AE000,  # 1.68MB（从 2.12MB 缩减）
+retro-core,   app,  ota_1,   0x2E0000, 0x120000,  # 1.125MB（不变）

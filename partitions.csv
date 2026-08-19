@@ -5,6 +5,9 @@
 # launcher     - ROM slot 0 (single-app ROM, or retro-go launcher)
 # retro-core   - ROM slot 1 (retro-go emulator core)
 # otadata      - Boot selection (loader sets to ota_0 before reboot)
+#
+# NOTE: WiFi 版使用 partitions_wifi.csv（更大的 factory 分区）
+# 本表保持上游原样以保证 retro-go 兼容性（launcher 2.12MB）
 
 # Name,       Type, SubType, Offset,   Size,     Flags
 nvs,          data, nvs,     0xA000,   0x5000,
