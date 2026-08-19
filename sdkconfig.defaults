@@ -48,7 +48,6 @@ CONFIG_BOOTLOADER_OTA_DATA_ERASE=y
 # Rollback disabled（与上游一致）
 # CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE is not set
 
-# ── WiFi（默认关闭，开启在 menuconfig） ─────────────────
-# CONFIG_XIAOMIAO_ENABLE_WIFI is not set
+# ── WiFi（默认关闭，开启时由 CI/用户追加 CONFIG_XIAOMIAO_ENABLE_WIFI=y） ──
 # WiFi 凭据（SSID/PASS/HOST/PORT/PATH）从 SD 卡根目录 /wifi.conf 读取，
 # 不再写死在固件中。参见 bm_wifi_ota.h 中的 bm_wifi_load_config()。
