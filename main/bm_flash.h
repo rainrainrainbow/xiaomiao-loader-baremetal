@@ -7,6 +7,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "bm_sd.h"   /* bm_file_t */
+
 /* 状态块（固化在 nvs 分区起始 sector） */
 typedef struct {
     char     cur_name[64];   /* 当前 ota_0 里的 ROM 名 */

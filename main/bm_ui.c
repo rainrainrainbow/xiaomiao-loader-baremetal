@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "bm_config.h"
 #include "bm_st7735.h"
 #include "bm_ui.h"
 

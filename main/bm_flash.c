@@ -51,7 +51,7 @@ typedef struct {
 static const esp_partition_t *find_part(const char *label)
 {
     return esp_partition_find_first(ESP_PARTITION_TYPE_APP,
-                                    ESP_PARTITION_SUBTYPE_OTA_0, label);
+                                    ESP_PARTITION_SUBTYPE_APP_OTA_0, label);
 }
 
 void bm_state_load(bm_state_t *st)

@@ -85,12 +85,14 @@ static int keys_poll(void)
     return s_stable;
 }
 
-/* 组合键检测：A + B 同时按下（WiFi 更新模式） */
+/* 组合键检测：A + B 同时按下（WiFi 更新模式，仅 WiFi 版使用） */
+#if BM_WIFI_ENABLED
 static bool keys_a_b_pressed(void)
 {
     return gpio_get_level(BTN_A_GPIO) == BTN_ACTIVE_LEVEL &&
            gpio_get_level(BTN_B_GPIO) == BTN_ACTIVE_LEVEL;
 }
+#endif
 
 /* ── 全局状态 ──────────────────────────────────────────── */
 static bm_lcd_t s_lcd;
@@ -142,9 +144,9 @@ static bool load_rom(const rom_entry_t *rom)
     if (rom->type == ROM_DUAL_IMG) {
         /* 双 app：launcher→ota_0，retro-core→ota_1，然后 set_boot(ota_0) */
         const esp_partition_t *ota0 = esp_partition_find_first(
-            ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_OTA_0, NULL);
+            ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_APP_OTA_0, NULL);
         const esp_partition_t *ota1 = esp_partition_find_first(
-            ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_OTA_1, NULL);
+            ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_APP_OTA_1, NULL);
         if (!ota0 || !ota1) {
             ESP_LOGE(TAG, "ota0/ota1 not found");
             return false;

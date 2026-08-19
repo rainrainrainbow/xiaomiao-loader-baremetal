@@ -48,7 +48,7 @@ size_t bm_file_read(bm_file_t *bf, void *dst, size_t size);
 /* seek 到绝对偏移 */
 bool bm_file_seek(bm_file_t *bf, uint32_t off);
 
-/* 列出 /boot 目录下 *.bin/*.img，填充 names（最多 max） */
+/* 列出 /boot 目录下 .bin 与 .img 文件，填充 names（最多 max） */
 int bm_sd_list_roms(bm_sd_t *sd, char names[][64], int max);
 
 #endif /* BM_SD_H */

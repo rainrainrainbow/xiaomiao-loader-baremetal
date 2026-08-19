@@ -23,7 +23,8 @@
 
 #define TAG "bm_sd"
 
-static sdmmc_card_t *s_card;
+static sdmmc_card_t s_card_inst;   /* 卡实例（sdmmc_card_init 填充） */
+static sdmmc_card_t *s_card = &s_card_inst;
 
 /* ── 底层扇区读 ────────────────────────────────────────── */
 static bool sd_read_sector(uint32_t sector, uint8_t *dst)
@@ -93,7 +94,7 @@ bool bm_sd_init(bm_sd_t *sd)
     host.slot = sd_handle;
     host.max_freq_khz = SD_SPI_MAX_FREQ_KHZ;
 
-    err = sdmmc_card_init(&host, &s_card);
+    err = sdmmc_card_init(&host, s_card);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "sdmmc_card_init failed: %s", esp_err_to_name(err));
         return false;
@@ -272,7 +273,6 @@ static uint32_t find_file_in_chain(bm_sd_t *sd, uint32_t start_cluster,
     uint32_t cluster = start_cluster;
     uint8_t buf[512];
     int guard = 0;
-    int name_len = (int)strlen(name);
 
     while (cluster >= 2 && cluster < 0x0FFFFFF8 && guard++ < 4096) {
         uint32_t sector = cluster_to_sector(sd, cluster);

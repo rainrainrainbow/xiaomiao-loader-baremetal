@@ -24,11 +24,6 @@ static uint32_t le32(const uint8_t *p)
            ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
 }
 
-static uint16_t le16(const uint8_t *p)
-{
-    return (uint16_t)(p[0] | (p[1] << 8));
-}
-
 /* 读文件一个字节 */
 static bool read_byte(bm_file_t *f, uint32_t off, uint8_t *b)
 {
