@@ -2,20 +2,21 @@
 # Flash: 4MB QIO 80MHz, partition table at 0x8000
 #
 # 相较于 partitions.csv，本表扩大 factory 分区以容纳 WiFi 版固件（~673KB），
-# 从 launcher 分区借空间。launcher 缩减至 1.68MB（仍可装大部分单 ROM）。
-# retro-core 保持 1.125MB。
+# 从 launcher 分区借空间。launcher 缩减至 1.5MB（仍可装大部分单 ROM）。
+# retro-core 保持 1.25MB（0x140000）。
 #
 # 注意：本表与 retro-go 原始分区表不兼容（launcher 空间缩小）。
 # 仅用于 WiFi OTA 固件烧录。
 #
 # factory: 1.125MB (0x120000)，装 WiFi 版 ~673KB
-# launcher: 1.68MB (0x1AE000)，从 2.12MB 缩减
-# retro-core: 1.125MB (0x120000)，不变
+# otadata: 0x130000, 8KB
+# launcher: 1.5MB (0x180000)，对齐 0x140000
+# retro-core: 1.25MB (0x140000)，与上游一致
 #
 # Name,       Type, SubType, Offset,   Size,     Flags
 nvs,          data, nvs,     0xA000,   0x5000,
 phy_init,     data, phy,     0xF000,   0x1000,
 factory,      app,  factory, 0x10000,  0x120000,
 otadata,      data, ota,     0x130000, 0x2000,
-launcher,     app,  ota_0,   0x132000, 0x1AE000,
-retro-core,   app,  ota_1,   0x2E0000, 0x120000,
+launcher,     app,  ota_0,   0x140000, 0x180000,
+retro-core,   app,  ota_1,   0x2C0000, 0x140000,
