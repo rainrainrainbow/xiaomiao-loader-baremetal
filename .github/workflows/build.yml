@@ -21,7 +21,7 @@ jobs:
             idf.py build
             idf.py size
             idf.py size-components
-            python3 -c "import re; d=open('sdkconfig').read(); import sys; [print(l) for l in d.splitlines() if 'FLASHMODE' in l or 'SPIRAM_MODE' in l]"
+            python3 -c "import re; d=open('sdkconfig').read(); [print(l) for l in d.splitlines() if 'FLASHMODE' in l or 'SPIRAM_MODE' in l]"
             idf.py merge-bin -o xiaomiao-loader-merged.bin
             ls -la build/*.bin
             ls -la *.bin 2>/dev/null || true
@@ -55,7 +55,7 @@ jobs:
             idf.py build
             idf.py size
             idf.py size-components
-            python3 -c 'import sys; d=open("sdkconfig").read(); [print(l) for l in d.splitlines() if "XIAOMIAO" in l or "FLASHMODE" in l]'
+            python3 -c "import re; d=open('sdkconfig').read(); [print(l) for l in d.splitlines() if 'XIAOMIAO' in l or 'FLASHMODE' in l]"
             idf.py merge-bin -o xiaomiao-loader-merged-wifi.bin
             ls -la build/*.bin
             ls -la *.bin 2>/dev/null || true
