@@ -13,6 +13,9 @@ idf_component_register(
 # WiFi 版：仅在 Kconfig 启用时编译 bm_wifi_ota.c 并链接 WiFi 依赖
 if(CONFIG_XIAOMIAO_ENABLE_WIFI)
     target_sources(${COMPONENT_LIB} PRIVATE "bm_wifi_ota.c")
+    idf_component_add_requirements(
+        PRIV_REQUIRES esp_event esp_wifi esp_netif nvs_flash lwip
+    )
     target_link_libraries(${COMPONENT_LIB} PRIVATE
         nvs_flash esp_wifi esp_event esp_netif lwip)
 endif()
