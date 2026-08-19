@@ -1,0 +1,38 @@
+# Kconfig — 裸机 Loader 自定义配置
+# 通过 menuconfig → Component config → Xiaomiao Loader 修改
+
+menu "Xiaomiao Loader"
+
+    config XIAOMIAO_ENABLE_WIFI
+        bool "Enable WiFi OTA update"
+        default n
+        help
+            Enable WiFi-based ROM update.
+            WARNING: adds ~100-160KB to firmware size.
+
+    if XIAOMIAO_ENABLE_WIFI
+
+        config XIAOMIAO_WIFI_SSID
+            string "WiFi SSID"
+            default "MyWiFi"
+
+        config XIAOMIAO_WIFI_PASS
+            string "WiFi Password"
+            default "12345678"
+
+        config XIAOMIAO_WIFI_HOST
+            string "OTA server host/IP"
+            default "192.168.1.100"
+
+        config XIAOMIAO_WIFI_PORT
+            int "OTA server port"
+            default 8080
+            range 1 65535
+
+        config XIAOMIAO_WIFI_PATH
+            string "OTA file path"
+            default "/latest.bin"
+
+    endif
+
+endmenu

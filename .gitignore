@@ -1,0 +1,22 @@
+# Build artifacts
+build/
+sdkconfig
+sdkconfig.old
+*.o
+*.a
+*.bin
+*.img
+*.elf
+*.map
+
+# ESP-IDF
+managed_components/
+dependencies.lock
+
+# IDE
+.vscode/
+compile_commands.json
+*.swp
+
+# OS
+.DS_Store

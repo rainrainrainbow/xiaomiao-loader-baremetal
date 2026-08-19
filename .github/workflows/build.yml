@@ -1,0 +1,71 @@
+name: Build Baremetal Loader
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build-nonwifi:
+    name: "Build (no WiFi)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build with ESP-IDF v5.5 (no WiFi)
+        uses: espressif/idf-action@v1
+        with:
+          esp_idf_version: v5.5.4
+          target: esp32
+          command: |
+            idf.py build
+            idf.py size
+            idf.py size-components
+            idf.py merge-bin -o xiaomiao-loader-merged.bin
+            ls -la build/*.bin xiaomiao-loader-merged.bin
+
+      - name: Upload artifacts (no WiFi)
+        uses: actions/upload-artifact@v4
+        with:
+          name: xiaomiao-loader-nonwifi
+          path: |
+            build/xiaomiao-loader-baremetal.bin
+            build/bootloader/bootloader.bin
+            build/partition_table/partition-table.bin
+            build/ota_data_initial.bin
+            xiaomiao-loader-merged.bin
+            build/xiaomiao-loader-baremetal.map
+          if-no-files-found: error
+
+  build-wifi:
+    name: "Build (WiFi OTA)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # WiFi 版：在 sdkconfig.defaults 末尾追加开启项（编译前读取，等效于
+      # menuconfig 勾选 Enable WiFi OTA）。SSID/PASS/HOST 等可在此调整。
+      - name: Enable WiFi in sdkconfig.defaults
+        run: |
+          echo "CONFIG_XIAOMIAO_ENABLE_WIFI=y" >> sdkconfig.defaults
+
+      - name: Build with ESP-IDF v5.5 (WiFi OTA)
+        uses: espressif/idf-action@v1
+        with:
+          esp_idf_version: v5.5.4
+          target: esp32
+          command: |
+            idf.py build
+            idf.py size
+            idf.py merge-bin -o xiaomiao-loader-merged-wifi.bin
+            ls -la build/*.bin xiaomiao-loader-merged-wifi.bin
+
+      - name: Upload artifacts (WiFi)
+        uses: actions/upload-artifact@v4
+        with:
+          name: xiaomiao-loader-wifi
+          path: |
+            build/xiaomiao-loader-baremetal.bin
+            xiaomiao-loader-merged-wifi.bin
+            build/xiaomiao-loader-baremetal.map
+          if-no-files-found: error
