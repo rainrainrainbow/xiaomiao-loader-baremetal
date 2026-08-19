@@ -54,27 +54,15 @@
 #define STATE_KEY_CURNAME    1
 #define STATE_KEY_CURSIZE    2
 
-/* ── WiFi 更新（由 Kconfig 注入，未启用时为 0 长度） ── */
+/* ── WiFi 更新（由 Kconfig 或手动定义注入） ────────────── */
 #ifdef CONFIG_XIAOMIAO_ENABLE_WIFI
 #define BM_WIFI_ENABLED      1
 #else
 #define BM_WIFI_ENABLED      0
 #endif
 
-#ifndef CONFIG_XIAOMIAO_WIFI_SSID
-#define CONFIG_XIAOMIAO_WIFI_SSID  ""
-#endif
-#ifndef CONFIG_XIAOMIAO_WIFI_PASS
-#define CONFIG_XIAOMIAO_WIFI_PASS  ""
-#endif
-#ifndef CONFIG_XIAOMIAO_WIFI_HOST
-#define CONFIG_XIAOMIAO_WIFI_HOST  ""
-#endif
-#ifndef CONFIG_XIAOMIAO_WIFI_PORT
-#define CONFIG_XIAOMIAO_WIFI_PORT  80
-#endif
-#ifndef CONFIG_XIAOMIAO_WIFI_PATH
-#define CONFIG_XIAOMIAO_WIFI_PATH  "/latest.bin"
-#endif
+/* WiFi 凭据不再使用 Kconfig 编译期常量，而是从 SD 卡
+ * /boot/wifi.conf 文件读取，参见 bm_wifi_ota.h 中的
+ * bm_wifi_config_t 和 bm_wifi_load_config()。 */
 
 #endif /* BM_CONFIG_H */

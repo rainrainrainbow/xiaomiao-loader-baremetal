@@ -194,7 +194,7 @@ static bool load_rom(const rom_entry_t *rom)
 #if BM_WIFI_ENABLED
 static void wifi_progress(int pct)
 {
-    bm_ui_progress("WIFI OTA", pct, CONFIG_XIAOMIAO_WIFI_PATH);
+    bm_ui_progress("WIFI OTA", pct, "Downloading...");
 }
 #endif
 
@@ -289,16 +289,25 @@ void app_main(void)
         } else if (key == KEY_RIGHT) {
 #if BM_WIFI_ENABLED
             if (keys_a_b_pressed()) {
-                bm_ui_progress("WIFI OTA", 0, "Connecting...");
-                bool ok = bm_wifi_ota_update(wifi_progress);
-                if (ok) {
-                    bm_ui_progress("WIFI OTA", 100, "Done! Rebooting...");
-                    vTaskDelay(pdMS_TO_TICKS(500));
-                    esp_restart();
-                } else {
-                    bm_ui_progress("WIFI OTA", 0, "FAILED");
-                    vTaskDelay(pdMS_TO_TICKS(1500));
+                /* 加载 WiFi 配置（从 SD 卡 /boot/wifi.conf） */
+                bm_wifi_config_t wcfg;
+                bm_ui_progress("WIFI OTA", 0, "Loading config...");
+                if (!bm_wifi_load_config(&s_sd, &wcfg)) {
+                    bm_ui_progress("WIFI OTA", 0, "No wifi.conf on SD!");
+                    vTaskDelay(pdMS_TO_TICKS(2000));
                     show_main();
+                } else {
+                    bm_ui_progress("WIFI OTA", 0, "Connecting...");
+                    bool ok = bm_wifi_ota_update(&wcfg, wifi_progress);
+                    if (ok) {
+                        bm_ui_progress("WIFI OTA", 100, "Done! Rebooting...");
+                        vTaskDelay(pdMS_TO_TICKS(500));
+                        esp_restart();
+                    } else {
+                        bm_ui_progress("WIFI OTA", 0, "FAILED");
+                        vTaskDelay(pdMS_TO_TICKS(1500));
+                        show_main();
+                    }
                 }
             }
 #else

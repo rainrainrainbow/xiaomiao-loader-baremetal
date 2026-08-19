@@ -50,8 +50,5 @@ CONFIG_BOOTLOADER_OTA_DATA_ERASE=y
 
 # ── WiFi（默认关闭，开启在 menuconfig） ─────────────────
 # CONFIG_XIAOMIAO_ENABLE_WIFI is not set
-CONFIG_XIAOMIAO_WIFI_SSID="MyWiFi"
-CONFIG_XIAOMIAO_WIFI_PASS="12345678"
-CONFIG_XIAOMIAO_WIFI_HOST="192.168.1.100"
-CONFIG_XIAOMIAO_WIFI_PORT=8080
-CONFIG_XIAOMIAO_WIFI_PATH="/latest.bin"
+# WiFi 凭据（SSID/PASS/HOST/PORT/PATH）从 SD 卡根目录 /wifi.conf 读取，
+# 不再写死在固件中。参见 bm_wifi_ota.h 中的 bm_wifi_load_config()。

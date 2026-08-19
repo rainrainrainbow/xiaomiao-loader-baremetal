@@ -2,12 +2,15 @@
  * bm_wifi_ota.c — WiFi OTA（可选编译）
  *
  * 仅在 CONFIG_XIAOMIAO_ENABLE_WIFI=y 时编译。依赖：
- *   - esp_wifi + esp_event + nvs_flash（WiFi 凭据/校准需要 NVS flash 驱动）
+ *   - esp_wifi + esp_event + nvs_flash（WiFi 校准需要 NVS flash 驱动）
  *     （注意：本文件保留 nvs_flash 初始化，因为 esp_wifi 依赖它；
  *      但 loader 自身的状态块仍用 bm_flash 的自制方案）
  *   - lwip（BSD socket）
  *
- * 流程：连 STA → HTTP GET → 跳过响应头 → 流式写 ota_0 → 校验长度 → otadata → 返回
+ * WiFi 凭据从 SD 卡 /boot/wifi.conf 文件读取，不写死在固件中。
+ *
+ * 流程：加载 wifi.conf → 连 STA → HTTP GET → 跳过响应头 → 流式写 ota_0
+ *       → 校验长度 → otadata → 返回
  */
 #include <string.h>
 #include <sys/socket.h>
@@ -25,6 +28,7 @@
 
 #include "bm_config.h"
 #include "bm_flash.h"
+#include "bm_sd.h"
 #include "bm_wifi_ota.h"
 
 #if BM_WIFI_ENABLED
@@ -34,10 +38,140 @@
 #define WIFI_CONNECTED_BIT BIT0
 #define WIFI_FAIL_BIT      BIT1
 #define WIFI_MAX_RETRY     3
-#define HTTP_TIMEOUT_MS     10000
 
 static EventGroupHandle_t s_wifi_events;
 static int s_retry_cnt;
+
+/* ── wifi.conf 解析 ─────────────────────────────────────── */
+
+/* 去除行尾 \r \n，返回实际长度 */
+static size_t trim_line(char *s, size_t len)
+{
+    while (len > 0 && (s[len-1] == '\r' || s[len-1] == '\n' || s[len-1] == ' '))
+        s[--len] = 0;
+    return len;
+}
+
+/* 跳过头部的 BOM（UTF-8 BOM: EF BB BF） */
+static const char *skip_bom(const char *s, size_t *len)
+{
+    if (*len >= 3 && (uint8_t)s[0] == 0xEF &&
+                     (uint8_t)s[1] == 0xBB &&
+                     (uint8_t)s[2] == 0xBF) {
+        *len -= 3;
+        return s + 3;
+    }
+    return s;
+}
+
+bool bm_wifi_load_config(bm_sd_t *sd, bm_wifi_config_t *cfg)
+{
+    memset(cfg, 0, sizeof(*cfg));
+    cfg->port = 80;                    /* 默认端口 */
+    cfg->valid = false;
+
+    if (!sd->mounted) {
+        ESP_LOGE(TAG, "SD not mounted, cannot load wifi.conf");
+        return false;
+    }
+
+    /* 打开 /wifi.conf（在 SD 卡根目录，不是 /boot/ 下） */
+    bm_file_t f;
+    if (!bm_file_open(sd, "/wifi.conf", &f)) {
+        ESP_LOGW(TAG, "wifi.conf not found on SD card root");
+        return false;
+    }
+
+    /* 一次性读入缓冲区（最大 4KB，wifi.conf 很小） */
+    char buf[4096];
+    size_t file_len = f.file_size;
+    if (file_len > sizeof(buf) - 1) {
+        file_len = sizeof(buf) - 1;
+    }
+    size_t read = bm_file_read(&f, buf, file_len);
+    buf[read] = 0;
+    if (read == 0) {
+        ESP_LOGE(TAG, "wifi.conf empty");
+        return false;
+    }
+
+    /* 逐行解析 */
+    const char *p = skip_bom(buf, &read);
+    size_t remaining = read - (size_t)(p - buf);
+    bool has_ssid = false, has_pass = false;
+    bool has_host = false, has_path = false;
+
+    while (remaining > 0) {
+        /* 找行尾 */
+        const char *nl = (const char *)memchr(p, '\n', remaining);
+        size_t line_len = nl ? (size_t)(nl - p) : remaining;
+
+        char line[512];
+        size_t cpy = line_len < sizeof(line) - 1 ? line_len : sizeof(line) - 1;
+        memcpy(line, p, cpy);
+        line[cpy] = 0;
+        trim_line(line, cpy);
+
+        if (nl) {
+            remaining -= (size_t)(nl + 1 - p);
+            p = nl + 1;
+        } else {
+            remaining = 0;
+        }
+
+        /* 跳过空行和注释 */
+        if (line[0] == 0 || line[0] == '#') {
+            continue;
+        }
+
+        /* 找 '=' */
+        char *eq = strchr(line, '=');
+        if (!eq) continue;
+        *eq = 0;
+        const char *key = line;
+        const char *val = eq + 1;
+
+        /* 去掉 key 尾部空格 */
+        {
+            char *k = key + strlen(key);
+            while (k > key && (k[-1] == ' ' || k[-1] == '\t')) *--k = 0;
+        }
+        /* 跳过 val 前导空格 */
+        while (*val == ' ' || *val == '\t') val++;
+
+        if (strcasecmp(key, "SSID") == 0) {
+            strncpy(cfg->ssid, val, sizeof(cfg->ssid) - 1);
+            has_ssid = true;
+        } else if (strcasecmp(key, "PASS") == 0) {
+            strncpy(cfg->pass, val, sizeof(cfg->pass) - 1);
+            has_pass = true;
+        } else if (strcasecmp(key, "HOST") == 0) {
+            strncpy(cfg->host, val, sizeof(cfg->host) - 1);
+            has_host = true;
+        } else if (strcasecmp(key, "PORT") == 0) {
+            unsigned long pv = strtoul(val, NULL, 10);
+            if (pv > 0 && pv <= 65535) {
+                cfg->port = (uint16_t)pv;
+            }
+        } else if (strcasecmp(key, "PATH") == 0) {
+            strncpy(cfg->path, val, sizeof(cfg->path) - 1);
+            has_path = true;
+        }
+    }
+
+    if (!has_ssid || !has_pass || !has_host || !has_path) {
+        ESP_LOGE(TAG, "wifi.conf incomplete: SSID=%d PASS=%d HOST=%d PATH=%d",
+                 has_ssid, has_pass, has_host, has_path);
+        return false;
+    }
+
+    cfg->valid = true;
+    ESP_LOGI(TAG, "wifi.conf loaded: SSID=%s HOST=%s PORT=%u PATH=%s",
+             cfg->ssid, cfg->host, cfg->port, cfg->path);
+    return true;
+}
+
+/* ── WiFi 连接 ──────────────────────────────────────────── */
 
 static void wifi_event_handler(void *arg, esp_event_base_t base,
                                int32_t id, void *data)
@@ -57,15 +191,15 @@ static void wifi_event_handler(void *arg, esp_event_base_t base,
     }
 }
 
-static bool wifi_connect(void)
+static bool wifi_connect(const bm_wifi_config_t *cfg)
 {
     s_wifi_events = xEventGroupCreate();
     s_retry_cnt = 0;
 
     /* esp_wifi 依赖 NVS 存储校准数据；loader 不使用 nvs_flash 的其他功能，
-     * 这里仅初始化（已由 bm_flash 用自制状态块管理自己的数据，互不冲突：
-     * 状态块用 nvs 分区 offset 0，而 nvs_flash 用其私有布局——若冲突可改为
-     * 独立分区。实际 nvs 分区 20KB，状态块 4KB，错开无碍） */
+     * 这里仅初始化（与 bm_flash 的自制状态块互不冲突：
+     * 状态块用 nvs 分区 offset 0，而 nvs_flash 用其私有布局。
+     * 实际 nvs 分区 20KB，状态块 4KB，错开无碍） */
     esp_err_t nvs_err = nvs_flash_init();
     if (nvs_err == ESP_ERR_NVS_NO_FREE_PAGES ||
         nvs_err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -77,19 +211,19 @@ static bool wifi_connect(void)
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     esp_netif_create_default_wifi_sta();
 
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+    wifi_init_config_t wcfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&wcfg));
 
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID,
                                                &wifi_event_handler, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP,
                                                &wifi_event_handler, NULL));
 
-    wifi_config_t wcfg = { 0 };
-    strncpy((char *)wcfg.sta.ssid, CONFIG_XIAOMIAO_WIFI_SSID, 32);
-    strncpy((char *)wcfg.sta.password, CONFIG_XIAOMIAO_WIFI_PASS, 64);
+    wifi_config_t wc = { 0 };
+    strncpy((char *)wc.sta.ssid, cfg->ssid, sizeof(wc.sta.ssid) - 1);
+    strncpy((char *)wc.sta.password, cfg->pass, sizeof(wc.sta.password) - 1);
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wcfg));
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wc));
     ESP_ERROR_CHECK(esp_wifi_start());
 
     EventBits_t bits = xEventGroupWaitBits(s_wifi_events,
@@ -99,17 +233,19 @@ static bool wifi_connect(void)
     return (bits & WIFI_CONNECTED_BIT) != 0;
 }
 
-/* 流式下载：返回 0 成功，否则错误码 */
-static int http_get_to_flash(void (*progress)(int pct))
+/* ── HTTP 流式下载 ──────────────────────────────────────── */
+/* 返回 0 成功，否则错误码 */
+static int http_get_to_flash(const bm_wifi_config_t *cfg,
+                             void (*progress)(int pct))
 {
     struct addrinfo hints = { 0 }, *res = NULL;
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
     char port_str[8];
-    snprintf(port_str, sizeof(port_str), "%d", CONFIG_XIAOMIAO_WIFI_PORT);
+    snprintf(port_str, sizeof(port_str), "%u", cfg->port);
 
-    if (getaddrinfo(CONFIG_XIAOMIAO_WIFI_HOST, port_str, &hints, &res) != 0) {
-        ESP_LOGE(TAG, "DNS failed");
+    if (getaddrinfo(cfg->host, port_str, &hints, &res) != 0) {
+        ESP_LOGE(TAG, "DNS failed for %s", cfg->host);
         return -1;
     }
 
@@ -123,7 +259,7 @@ static int http_get_to_flash(void (*progress)(int pct))
     setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
 
     if (connect(fd, res->ai_addr, res->ai_addrlen) != 0) {
-        ESP_LOGE(TAG, "connect failed");
+        ESP_LOGE(TAG, "connect to %s:%u failed", cfg->host, cfg->port);
         close(fd);
         freeaddrinfo(res);
         return -3;
@@ -131,17 +267,20 @@ static int http_get_to_flash(void (*progress)(int pct))
     freeaddrinfo(res);
 
     /* 发送 HTTP GET */
-    char req[256];
+    char req[512];
     int rl = snprintf(req, sizeof(req),
                       "GET %s HTTP/1.1\r\n"
-                      "Host: %s:%d\r\n"
+                      "Host: %s:%u\r\n"
                       "Connection: close\r\n"
                       "User-Agent: xiaomiao-loader\r\n"
                       "\r\n",
-                      CONFIG_XIAOMIAO_WIFI_PATH,
-                      CONFIG_XIAOMIAO_WIFI_HOST,
-                      CONFIG_XIAOMIAO_WIFI_PORT);
-    if (send(fd, req, rl, 0) != rl) {
+                      cfg->path, cfg->host, cfg->port);
+    if (rl <= 0 || rl >= (int)sizeof(req)) {
+        ESP_LOGE(TAG, "request too long");
+        close(fd);
+        return -4;
+    }
+    if (send(fd, req, (size_t)rl, 0) != rl) {
         ESP_LOGE(TAG, "send failed");
         close(fd);
         return -4;
@@ -182,7 +321,7 @@ static int http_get_to_flash(void (*progress)(int pct))
 
     /* Content-Length 可选；这里按流式处理，一直读到 EOF（Connection: close） */
     const esp_partition_t *part = esp_partition_find_first(
-        ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_OTA_0, NULL);
+        ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_APP_OTA_0, NULL);
     if (!part) {
         close(fd);
         return -8;
@@ -214,16 +353,25 @@ static int http_get_to_flash(void (*progress)(int pct))
     return 0;
 }
 
-bool bm_wifi_ota_update(void (*progress)(int pct))
+/* ── 公开 API ───────────────────────────────────────────── */
+
+bool bm_wifi_ota_update(const bm_wifi_config_t *cfg,
+                        void (*progress)(int pct))
 {
-    ESP_LOGI(TAG, "WiFi OTA started (AP=%s)", CONFIG_XIAOMIAO_WIFI_SSID);
-    if (!wifi_connect()) {
+    if (!cfg || !cfg->valid) {
+        ESP_LOGE(TAG, "invalid WiFi config");
+        return false;
+    }
+
+    ESP_LOGI(TAG, "WiFi OTA started (AP=%s, HOST=%s:%u, PATH=%s)",
+             cfg->ssid, cfg->host, cfg->port, cfg->path);
+    if (!wifi_connect(cfg)) {
         ESP_LOGE(TAG, "WiFi connect failed");
         return false;
     }
     ESP_LOGI(TAG, "WiFi connected");
 
-    int ret = http_get_to_flash(progress);
+    int ret = http_get_to_flash(cfg, progress);
     if (ret != 0) {
         ESP_LOGE(TAG, "HTTP download failed (%d)", ret);
         esp_wifi_stop();

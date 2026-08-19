@@ -1,5 +1,7 @@
 # Kconfig — 裸机 Loader 自定义配置
 # 通过 menuconfig → Component config → Xiaomiao Loader 修改
+# WiFi 凭据（SSID/PASS/HOST/PORT/PATH）不再写在 Kconfig 中，
+# 改为从 SD 卡根目录 /wifi.conf 文件读取，方便用户自由修改。
 
 menu "Xiaomiao Loader"
 
@@ -9,30 +11,6 @@ menu "Xiaomiao Loader"
         help
             Enable WiFi-based ROM update.
             WARNING: adds ~100-160KB to firmware size.
-
-    if XIAOMIAO_ENABLE_WIFI
-
-        config XIAOMIAO_WIFI_SSID
-            string "WiFi SSID"
-            default "MyWiFi"
-
-        config XIAOMIAO_WIFI_PASS
-            string "WiFi Password"
-            default "12345678"
-
-        config XIAOMIAO_WIFI_HOST
-            string "OTA server host/IP"
-            default "192.168.1.100"
-
-        config XIAOMIAO_WIFI_PORT
-            int "OTA server port"
-            default 8080
-            range 1 65535
-
-        config XIAOMIAO_WIFI_PATH
-            string "OTA file path"
-            default "/latest.bin"
-
-    endif
+            WiFi credentials are read from /boot/wifi.conf on the SD card.
 
 endmenu
