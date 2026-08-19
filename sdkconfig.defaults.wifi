@@ -1,0 +1,8 @@
+# ===== WiFi OTA 额外配置 =====
+# 与 sdkconfig.defaults 配合使用（SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.wifi"）
+# 该文件由 CI WiFi job 使用，也可本地手动编译 WiFi 版：
+#   export SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.wifi"
+#   idf.py build
+
+# 启用 WiFi OTA 功能（链接 esp_wifi/lwip/nvs_flash，+100~160KB）
+CONFIG_XIAOMIAO_ENABLE_WIFI=y

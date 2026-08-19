@@ -21,6 +21,7 @@ jobs:
             idf.py build
             idf.py size
             idf.py size-components
+            grep -E 'CONFIG_ESPTOOLPY_FLASHMODE|CONFIG_SPIRAM_MODE' sdkconfig
             idf.py merge-bin -o xiaomiao-loader-merged.bin
             ls -la build/*.bin
             ls -la *.bin 2>/dev/null || true
@@ -50,9 +51,10 @@ jobs:
           esp_idf_version: v5.5.4
           target: esp32
           command: |
-            echo "CONFIG_XIAOMIAO_ENABLE_WIFI=y" >> sdkconfig.defaults
+            export SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.wifi"
             idf.py build
             idf.py size
+            grep -E 'CONFIG_XIAOMIAO_ENABLE_WIFI|CONFIG_ESPTOOLPY_FLASHMODE' sdkconfig
             idf.py merge-bin -o xiaomiao-loader-merged-wifi.bin
             ls -la build/*.bin
             ls -la *.bin 2>/dev/null || true
