@@ -6,7 +6,7 @@
 - ✅ **无 fatfs/VFS**（自制 FAT32 只读解析，省 ~20-30KB）
 - ✅ **无 nvs_flash**（自制状态块，省 ~15-25KB）
 - ✅ **无 app_update/esp_ota**（esp_partition 直写 + 手写 otadata，省 ~15-25KB）
-- ✅ **体积：无 WiFi 版 app 226KB ✅（factory 分区缩至 256KB），WiFi 版用独立分区表（factory 1.125MB）**
+- ✅ **体积：无 WiFi 版 app 226KB ✅（factory 256KB + launcher 扩充至 2432KB），WiFi 版用独立分区表（factory 1.125MB）**
 - 📶 **可选 WiFi OTA 更新**（Kconfig 开关，凭据从 SD 卡 wifi.conf 读取）
 - 🔑 **WiFi 凭据不写死**——在 SD 卡根目录放 `wifi.conf` 即可
 
@@ -95,4 +95,5 @@ Loader 会 GET `http://<HOST>:8080/latest.bin`，下载后写入 ota_0 并重启
 | WiFi 凭据 | 无 WiFi | SD 卡 wifi.conf 文件 |
 | **app 体积** | ~300-450KB | **226KB（无 WiFi）** |
 | factory 分区 | 568KB（0x8E000） | **256KB（0x40000）✅ 缩小 55%** |
+| launcher 分区 | 2.12MB（0x220000） | **2.375MB（0x260000）✅ 扩容 256KB** |
 | WiFi | - | ✅ 可选（~673KB，需独立分区表） |
