@@ -1,18 +1,20 @@
-# Xiaomiao ROM Loader partition table (unchanged from upstream)
+# Xiaomiao ROM Loader partition table (factory 缩小至 256KB)
 # Flash: 4MB QIO 80MHz, partition table at 0x8000
 #
 # factory      - Loader firmware (persistent, never overwritten by OTA)
+#               缩小至 256KB（0x40000），无 WiFi 版 app 226KB 完美装入
 # launcher     - ROM slot 0 (single-app ROM, or retro-go launcher)
 # retro-core   - ROM slot 1 (retro-go emulator core)
 # otadata      - Boot selection (loader sets to ota_0 before reboot)
 #
-# NOTE: WiFi 版使用 partitions_wifi.csv（更大的 factory 分区）
-# 本表保持上游原样以保证 retro-go 兼容性（launcher 2.12MB）
+# NOTE: 仅缩小 factory 大小，launcher/retro-core 偏移保持与上游一致
+#       （retro-go 兼容性 100% 保留）
+#       WiFi 版使用 partitions_wifi.csv（更大的 factory 分区）
 
 # Name,       Type, SubType, Offset,   Size,     Flags
 nvs,          data, nvs,     0xA000,   0x5000,
 phy_init,     data, phy,     0xF000,   0x1000,
-factory,      app,  factory, 0x10000,  0x8E000,
+factory,      app,  factory, 0x10000,  0x40000,
 otadata,      data, ota,     0x9E000,  0x2000,
 launcher,     app,  ota_0,   0xA0000,  0x220000,
 retro-core,   app,  ota_1,   0x2C0000, 0x140000,
